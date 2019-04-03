@@ -49,7 +49,7 @@ class LocallyLinearBackward():
         if(Y.shape != Y_hat.shape):
             raise ValueError("Y and Y_hat must be the same shape")
 
-        self.W, self.ind = locally_linear_backward_parameters(Y, Y_hat)
+        self.W, self.ind = locally_linear_backward_parameters(Y, Y_hat, self.n_neighbors)
         if (not return_error):
             return self
         else:
@@ -62,7 +62,7 @@ class LocallyLinearBackward():
 
         X_hat = np.empty(X.shape,dtype=X.dtype)
         for i, weight in enumerate(self.W):
-            X_hat[i, :] = np.dot(weight, X[ind[i]])
+            X_hat[i, :] = np.dot(weight, X[self.ind[i]])
         return X_hat
 
 def barycenter_weights(X, Z, reg=1e-3):
