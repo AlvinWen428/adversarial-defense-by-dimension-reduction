@@ -40,29 +40,61 @@ def locally_linear_backward_parameters(Y, Y_hat, n_neighbors, method="standard",
     return W, ind
 
 class LocallyLinearBackward():
+    """Compute X_hat from X using the local linear parameters get from  Y and Y_hat
+
+        Parameters:
+        n_neighbors: integer
+            Number of neighbors to construct each Y_hat.
+
+        reg: float, optional
+
+        n_jobs: integer
+
+    """
     def __init__(self, n_neighbors, reg=1e-3, n_jobs=None):
         self.n_neighbors = n_neighbors
         self.reg = reg
         self.n_jobs=n_jobs
 
     def fit(self, Y, Y_hat, return_error=False):
-        if(Y.shape != Y_hat.shape):
-            raise ValueError("Y and Y_hat must be the same shape")
+        """Compute the local linear parameters using Y and Y_hat 
+            Y: array-like, shape (n_samples, n_dimentions)
 
-        self.W, self.ind = locally_linear_backward_parameters(Y, Y_hat, self.n_neighbors)
+            Y_hat: array-like, shape (n_samples, n_dimentions)
+
+            return_error: boolean
+                return the average linear fit error
+        """
+
+        if(Y.shape[1] != Y_hat.shape[1]):
+            raise ValueError("Y and Y_hat must have the same dimention")
+
+        self.n_samples_to_use = Y.shape[0]
+
+        self.W, self.ind = locally_linear_backward_parameters(Y, Y_hat, self.n_neighbors, self.reg, self.n_jobs)
+        self.W = self.W.reshape(self.W.shape + (1,))
         if (not return_error):
             return self
         else:
-            error = 0 # error 还没写
+            reconstructed_Y_hat = np.sum(Y[self.ind] * self.W, axis=1)
+
+            error = (Y_hat - reconstructed_Y_hat) ** 2 / Y.shape[0]
+
             return self, error
 
     def error_backward(self, X):
-        if(X.shape[0] != self.W.shape[0]):
+        """Compute X_hat using X and local linear parameters
+            X_hat: array-like, shape (n_samples, n_dimentions)
+
+        """
+        if(X.shape[0] != self.n_samples_to_use):
             raise ValueError("Samples of X should be the same as Y")
 
-        X_hat = np.empty(X.shape,dtype=X.dtype)
-        for i, weight in enumerate(self.W):
-            X_hat[i, :] = np.dot(weight, X[self.ind[i]])
+        # X_hat = np.empty(X.shape, dtype=X.dtype)
+        # for i, weight in enumerate(self.W):
+        #     X_hat[i, :] = np.dot(weight, X[self.ind[i]])
+        X_hat = np.sum(X[self.ind] * self.W, axis=1)
+
         return X_hat
 
 def barycenter_weights(X, Z, reg=1e-3):
