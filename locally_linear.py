@@ -17,27 +17,56 @@ from sklearn.utils.validation import FLOAT_DTYPES
 from sklearn.neighbors import NearestNeighbors
 
 
-def locally_linear_backward_parameters(Y, Y_hat, n_neighbors, method="standard",reg=1e-3, n_jobs=None):
-    nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1, n_jobs=n_jobs)
-    nbrs.fit(Y)
-    X = nbrs._fit_X
+# def locally_linear_backward_parameters(Y, Y_hat, n_neighbors, method="standard",reg=1e-3, n_jobs=None):
+#     nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1, n_jobs=n_jobs)
+#     nbrs.fit(Y)
+#     X = nbrs._fit_X
 
-    N, d_in = X.shape
+#     N, d_in = X.shape
 
-    if n_neighbors >= N:
-        raise ValueError(
-            "Expected n_neighbors <= n_samples, "
-            " but n_samples = %d, n_neighbors = %d" %
-            (N, n_neighbors)
-        )
+#     if n_neighbors >= N:
+#         raise ValueError(
+#             "Expected n_neighbors <= n_samples, "
+#             " but n_samples = %d, n_neighbors = %d" %
+#             (N, n_neighbors)
+#         )
 
-    if n_neighbors <= 0:
-        raise ValueError("n_neighbors must be positive")
+#     if n_neighbors <= 0:
+#         raise ValueError("n_neighbors must be positive")
         
+#     if method == 'standard':
+#         ind = nbrs.kneighbors(X, return_distance=False)[:, 1:]
+#         W = barycenter_weights(Y_hat, Y[ind], reg=reg)
+#     return W, ind
+
+def locally_linear_backward_parameters(Y, Y_hat, n_neighbors, method="standard", reg=1e-3, n_jobs=None):
+    if Y.shape[1]!=Y_hat.shape[1]:
+        raise ValueError("The base and the target should have the same dimention")
+
+    if n_neighbors <= 0 :
+        raise ValueError("n_neighbors must be positive")
+
+    if n_neighbors > Y.shape[0]:
+        raise ValueError("Expected n_neighbors <= n_samples")
+    
     if method == 'standard':
-        ind = nbrs.kneighbors(X, return_distance=False)[:, 1:]
+        ind = kneighbors(Y, Y_hat, n_neighbors)
         W = barycenter_weights(Y_hat, Y[ind], reg=reg)
+    else:
+        raise ValueError("'%s' is not a valid key word", method)
+    
     return W, ind
+
+def kneighbors(X, Z, n_neighbors):
+    if(X.shape[1]!=Z.shape[1]):
+        raise ValueError("The base and the target should have the same dimention")
+
+    ind = np.empty((Z.shape[0], n_neighbors), dtype=np.int32)
+    for i, z in enumerate(Z):
+        D = np.sqrt(np.sum((X - z)**2, axis=1))
+        ind[i] = sorted(range(len(D)), key=lambda k: D[k])[:n_neighbors]
+
+    return ind
 
 class LocallyLinearBackward():
     """Compute X_hat from X using the local linear parameters get from  Y and Y_hat
@@ -71,7 +100,7 @@ class LocallyLinearBackward():
 
         self.n_samples_to_use = Y.shape[0]
 
-        self.W, self.ind = locally_linear_backward_parameters(Y, Y_hat, self.n_neighbors, self.reg, self.n_jobs)
+        self.W, self.ind = locally_linear_backward_parameters(Y, Y_hat, self.n_neighbors, reg=self.reg, n_jobs=self.n_jobs)
         self.W = self.W.reshape(self.W.shape + (1,))
         if (not return_error):
             return self
