@@ -62,7 +62,6 @@ class Conv(nn.Module):
 class Fc(nn.Module):
     def __init__(self, input_channel, output_channel):
         super(Fc, self).__init__()
-        self.layer = nn.Linear(input_channel, output_channel)
         self.layer = nn.Sequential(
             nn.Linear(input_channel, 64),
             nn.BatchNorm1d(64),
@@ -73,11 +72,31 @@ class Fc(nn.Module):
             nn.LeakyReLU(),
 
             nn.Linear(128, output_channel))
+        self.initialization()
+
 
     def forward(self, x):
         out = self.layer(x)
         return out
+    
+    def initialization(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                m.weight = nn.init.xavier_normal(m.weight)
 
+
+class vgg_tiny_complete(nn.Module):
+    def __init__(self, input_channel, output_channel):
+        super(vgg_tiny_complete, self).__init__()
+        self.conv = Conv()
+        self.fc = Fc(input_channel=7, output_channel=10)
+    
+    def forward(self, x):
+        x = self.conv(x)
+        out = self.fc(x)
+        return out
+
+                
 
 if __name__ == '__main__':
     model1 = Conv(output_channel=32)
