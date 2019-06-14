@@ -578,11 +578,11 @@ class DifferentialEvolutionSolver(object):
 
             # should the solver terminate?
             convergence = self.convergence
-
+            if convergence == 0:
+                convergence = 1
             if (self.callback and
                     self.callback(self._scale_parameters(self.population[0]),
                                   convergence=self.tol / convergence) is True):
-
                 warning_flag = True
                 status_message = ('callback function requested stop early '
                                   'by returning True')
